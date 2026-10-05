@@ -20,4 +20,9 @@ class VelocityProfiler:
         # This controls how fast the car drives based on the road shape.
         # It slows the car down in sharp turns to prevent slipping.
         # Implement the formula to calculate safe speed from curvature, and clamp it.
-        pass
+        k=abs(kappa)   
+        if k < 1e-6:       #to check the almost straight cases and the straight ones
+            return self.max_speed
+        valid_speed= (math.sqrt(self.max_lat_accel / k))
+        return min(valid_speed, self.max_speed) 
+

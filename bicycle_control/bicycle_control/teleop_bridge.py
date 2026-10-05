@@ -17,8 +17,8 @@ from std_msgs.msg import Float32
 # ==============================================================================
 # Phase 2 (Milestone 4): Uncomment these imports when upgrading to cruise control
 # ==============================================================================
-# from nav_msgs.msg import Odometry
-# from bicycle_control.longitudinal_pid import PIDLongitudinalController
+from nav_msgs.msg import Odometry
+from bicycle_control.longitudinal_pid import PIDLongitudinalController
 
 
 class TeleopBridge(Node):
@@ -51,24 +51,34 @@ class TeleopBridge(Node):
         self.target_vel = 0.0
         self.last_cmd_time = self.get_clock().now()
 
+
+        
+
         # TODO: Phase 2 (Milestone 4.2) — Closed-Loop Cruise Control Setup
         # This allows the car to automatically hold a steady speed instead of requiring manual throttle.
         # Initialize the PID speed controller and subscribe to odometry data.
+        self.current_vel = 0.0
+        self.pid = PIDLongitudinalController()
+        self.odom_sub = self.create_subscription(Odometry,'/state',self.odom_callback,10)
 
         # Publish loop at 10 Hz
         self.timer = self.create_timer(0.1, self.publish_commands)
 
-    # def odom_callback(self, msg: Odometry):
+    def odom_callback(self, msg: Odometry):
     #     """Milestone 4.2: Extracts vehicle forward speed from /state odometry."""
-    #     pass
+        self.current_vel= msg.twist.twist.linear.x
+
 
     def cmd_callback(self, msg: Twist):
         """Translates Twist linear.x to throttle [-1, 1] and angular.z into steering (rad)."""
         # TODO: Milestone 3.1 — Teleoperation Command Mapping
         # This connects user inputs (keyboard/joystick) to the car's physical actuators.
         # Map the incoming Twist linear/angular commands to throttle and steering.
-        self.current_throttle = msg.linear.x / self.max_linear_vel
-        self.current_throttle = np.clip(self.current_throttle,-1,1)
+        if self.use_cruise_control:
+            self.target_vel= msg.linear.x
+        else:       
+            self.current_throttle = msg.linear.x / self.max_linear_vel
+            self.current_throttle = np.clip(self.current_throttle,-1,1)
 
         self.current_steer = (msg.angular.z / self.max_angular_vel) * self.max_steer_rad
         self.current_steer = np.clip(self.current_steer,-self.max_steer_rad, self.max_steer_rad)
@@ -82,18 +92,41 @@ class TeleopBridge(Node):
     def publish_commands(self):
         throttle_msg = Float32()
         steer_msg = Float32()
+
         now = self.get_clock().now()
         time_passed = (now - self.last_cmd_time).nanoseconds / 1e9
-        if time_passed < self.auto_zero_timeout:
-            throttle_msg.data = self.current_throttle
-            self.throttle_pub.publish(throttle_msg)
-            steer_msg.data = self.current_steer
-            self.steer_pub.publish(steer_msg)
+
+        command_active = time_passed < self.auto_zero_timeout
+
+        if command_active:
+            target = self.target_vel
+            steer = self.current_steer
         else:
-            throttle_msg.data = 0.0
-            self.throttle_pub.publish(throttle_msg)
-            steer_msg.data = 0.0
-            self.steer_pub.publish(steer_msg)
+            target = 0.0
+            steer = 0.0
+            self.target_vel = 0.0
+
+        if self.use_cruise_control:
+            throttle = self.pid.compute(target, self.current_vel)
+        else:
+            throttle = self.current_throttle if command_active else 0.0
+
+        throttle_msg.data = throttle
+        self.throttle_pub.publish(throttle_msg)
+
+        steer_msg.data = steer
+        self.steer_pub.publish(steer_msg)             
+
+        # if time_passed < self.auto_zero_timeout:
+        #     throttle_msg.data = self.current_throttle
+        #     self.throttle_pub.publish(throttle_msg)
+        #     steer_msg.data = self.current_steer
+        #     self.steer_pub.publish(steer_msg)
+        # else:
+        #     throttle_msg.data = 0.0
+        #     self.throttle_pub.publish(throttle_msg)
+        #     steer_msg.data = 0.0
+        #     self.steer_pub.publish(steer_msg)
 
 
 

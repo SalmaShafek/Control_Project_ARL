@@ -26,16 +26,46 @@ class PIDLongitudinalController:
 
         self.integral = 0.0
         self.prev_error = 0.0
+        self.prev_vel = None
 
     def compute(self, target_vel, current_vel):
         """Computes normalized throttle/braking effort in [-1.0, 1.0]."""
-        # TODO: Milestone 4.1 — Longitudinal PID Speed Control & Anti-Windup
-        # This is the speed regulator. Because the car has drag, simply setting
-        # a target speed isn't enough — it needs closed-loop control.
-        # Implement a PID controller on the velocity error with anti-windup on the integrator.
-        pass
+
+        error = target_vel - current_vel
+
+        p = self.kp * error
+
+        if self.prev_vel is None:
+            d = 0.0
+        else:
+            d = -self.kd * (current_vel - self.prev_vel) / self.dt
+
+        temp_integral = self.integral + error * self.dt
+        temp_integral = np.clip(temp_integral,-self.integral_limit,self.integral_limit)
+
+        temp_i = self.ki * temp_integral
+        temp_output = p + temp_i + d
+
+        if not (
+            (temp_output > self.max_throttle and error > 0) or
+            (temp_output < -self.max_brake and error < 0)
+        ):
+            self.integral = temp_integral
+
+        i = self.ki * self.integral
+
+        output = p + i + d
+
+        output = float(np.clip(output,-self.max_brake,self.max_throttle))
+
+        self.prev_error = error
+        self.prev_vel = current_vel
+
+        return output
+    
 
     def reset(self):
         """Resets integrator and previous error state."""
         self.integral = 0.0
         self.prev_error = 0.0
+        self.prev_vel= None

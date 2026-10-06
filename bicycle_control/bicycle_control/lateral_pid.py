@@ -25,7 +25,7 @@ class LateralPIDController:
         self.integral_limit = integral_limit
 
         self.integral_cte = 0.0
-        self.prev_cte = 0.0
+        self.prev_cte = None
 
     def compute_steering(self, cte, heading_err):
         """Computes front wheel steering angle delta in radians.
@@ -42,9 +42,34 @@ class LateralPIDController:
         # is off the path (CTE) and how misaligned its heading is.
         # Implement PID on the CTE with anti-windup, add a heading correction term,
         # and clamp the output to the steering limits.
-        pass
+
+        ## car is left to the road (+ve error) -> needs to turn right (requires to be -ve steering) so it has to be reversed
+        p= - self.kp * cte
+        d = - (((cte-self.prev_cte) / self.dt) * self.kd) if self.prev_cte is not None else 0.0
+
+        temp_integral = (self.integral_cte + cte * self.dt)
+        temp_integral = np.clip(temp_integral, -self.integral_limit, self.integral_limit) 
+        temp_i = temp_integral * self.ki
+         
+
+        temp_output = p - temp_i + d - heading_err* self.k_yaw
+
+        saturated = (temp_output > self.max_steer_rad and cte < 0) or (temp_output < -self.max_steer_rad and cte > 0)
+
+        if not saturated:
+            self.integral_cte = temp_integral
+
+        i= self.integral_cte * self.ki
+        output = p - i +d - heading_err * self.k_yaw
+        output= np.clip(output, -self.max_steer_rad,self.max_steer_rad)
+        self.prev_cte = cte
+        return float(output)
+        
+
+
+
 
     def reset(self):
         """Resets integrator and previous error state."""
         self.integral_cte = 0.0
-        self.prev_cte = 0.0
+        self.prev_cte = None

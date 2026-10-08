@@ -14,6 +14,7 @@ from bicycle_control.velocity_profiler import VelocityProfiler
 from bicycle_control.lateral_pid import LateralPIDController
 from bicycle_control.pure_pursuit import PurePursuitController
 from bicycle_control.mpc import KinematicBicycleMPC
+from geometry_msgs.msg import PointStamped
 
 
 class ControllerNode(Node):
@@ -47,6 +48,7 @@ class ControllerNode(Node):
         # Publishers (10 Hz rate per assignment specification)
         self.throttle_pub = self.create_publisher(Float32, '/throttle', 10)
         self.steer_pub = self.create_publisher(Float32, '/steer', 10)
+        self.target_pub = self.create_publisher(PointStamped, '/controller/target', 10)
 
         # Subscribers
         self.state_sub = self.create_subscription(Odometry, '/state', self.state_callback, 10)
@@ -132,6 +134,16 @@ class ControllerNode(Node):
 
         return cte, heading_err, kappa
 
+    def publish_target(self, x, y):
+        """Publishes the point the controller is currently aiming at (for RViz)."""
+        msg = PointStamped()
+        msg.header.frame_id = 'map'
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.point.x = float(x)
+        msg.point.y = float(y)
+        self.target_pub.publish(msg)
+                
+
     def control_loop(self):
         """Executes selected controller at 10 Hz."""
         if self.current_state is None or len(self.path_points) < 2:
@@ -158,6 +170,8 @@ class ControllerNode(Node):
             steer_rad, throttle_cmd = self.mpc.solve(
                 [x, y, yaw, v], ref_traj, current_steer=self.current_steer
             )
+            if ref_traj:
+                self.publish_target(ref_traj[-1][0], ref_traj[-1][1])
 
         else:
             # Mode B: Geometric Pure Pursuit Benchmark (Default)
@@ -165,6 +179,7 @@ class ControllerNode(Node):
             tgt_idx, tgt_pt = self.pure_pursuit.find_target_waypoint(
                 x, y, self.path_points, lookahead
             )
+            self.publish_target(self.path_points[tgt_idx][0], self.path_points[tgt_idx][1])
             steer_rad = self.pure_pursuit.compute_steering(x, y, yaw, tgt_pt, lookahead)
 
             target_v = self.target_speed
@@ -244,6 +259,7 @@ class ControllerNode(Node):
             ref.append([px, py, pyaw, self.target_speed])
         return ref
 
+        
 
 def main(args=None):
     rclpy.init(args=args)

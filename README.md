@@ -56,9 +56,9 @@ The vehicle is modeled through a kinematic bicycle model that uses (x,y,yaw,v) a
 | 5.3 | Pure Pursuit | Done | `bicycle_control/bicycle_control/pure_pursuit.py` |
 | 5.4 | Extended kinematic MPC | Done | `bicycle_control/bicycle_control/mpc.py` |
 | 5.5 | Lap analyzer, telemetry, RViz dashboard | Done | `track_environment/track_environment/lap_analyzer.py` |
-| 6 | Free exploration | Done | see [section 9](#10-milestone-6-free-exploration) |
+| 6 | Free exploration | Done | see [section 9](#9-milestone-6-free-exploration) |
 | 7 | Documentation (this file) | Done | `README.md` |
-| 8 | Video walkthrough | DONE | (https://drive.google.com/drive/folders/1BquYQReVJITlk9l02qz1mvBWxcq3mg_R?usp=sharing) |
+| 8 | Video walkthrough | Done | link in section 0 |
 
 ---
 
@@ -571,19 +571,42 @@ profiler's speed into the MPC reference, which is listed as possible future work
 
 ## 9. Milestone 6: free exploration
 
-1. **Kinematics vs multi-body.** This simulator uses the kinematic bicycle model, which works on one steering aangle δ, with tan δ = L/R. A real four-wheel car cannot do this because in the real world the inner tire will take a smaller radius than the outer one during turning or they may slip, wear out etc. Both wheels must be perpendicular to their lines to the turn’s center, so they need different angles:
+1. **Kinematics vs multi-body.** This simulator uses the kinematic bicycle model, which works on one steering aangle δ, with tan δ = L/R. A real four-wheel car cannot do this because in the real world the inner tire will take a smaller radius than the outer one during turning or they may slip, wear out etc. Both wheels must be perpendicular to their lines to the turn’s center, so they need different angles:The Ackermann version computes separate left and right steering angles from the commanded turning radius, using the same formulas as above. 
+
 
 tan δ_inner = L / (R − W/2)
 tan δ_outer = L / (R + W/2)
 
-In ros2_control, 
+In ros2_control, the steering controllers library only produces inverse kinematics: tell it you want to move in a certain way and it translates that to the motor. It gives steering posion for each joint and a velocity for each traction joint. Since it cannot do path tracking, other controllers like MPC, Pure Pursuit can take its inputs and translate them to Twist.
 
-2. **2D vs 3D simulation.** FILL: the modelling and compute trade-offs between this lightweight simulator and
-   Gazebo / MVSim.
-3. **Deterministic vs sampling-based control.** FILL: how Nav2 MPPI differs from the SLSQP-based MPC of
-   section 4.8 in flexibility, obstacle handling and compute.
+2. **2D vs 3D simulation.** A 2D sim assumes that there is no slip in the wheels, so it is relatively easy to compute and model.
+3D sims add another layer which is the actual physics surrounding the car. Gazebo for example can model tire grip using (the Pacejka Magic Formula), suspension, load transfer, terrain, and sensor noise.
 
-**What I did:** FILL: describe your experiment and its result.
+|                     | 2D kinematic (mine)  | 3D physics (Gazebo / MVSim)                                          |
+|---------------------|----------------------|----------------------------------------------------------------------|
+| Compute             | Very light           | Heavier                                                              |
+| Setup               | A few Python files   | Robot models, world files, bridge config, environment variables, optionally Docker |
+| High-speed accuracy | Poor (no slip)       | Much better                                                          |
+| Sensors and obstacles | Not modeled        | Modeled                                                              |
+| Iteration speed     | Fast                 | Slower                                                               |
+| Sim-to-real transfer | Weaker              | Stronger, but a gap remains                                          |
+
+MVsim is lighter than Gazebo, but still simulates 3D. 
+Takeaway. A controller tuned in my 2D sim may behave differently on a real car, because the real car slides where my model doesn’t. The 2D sim is best for quick controller comparison, and 3D engines are best when perception, terrain, or high-speed dynamics matter.
+
+3. **Deterministic vs sampling-based control.** (Deep dive into mppi in milestone 6 notes.)
+Deterministic (MPC): solves for 1 optimized solution only.
+sampling-based control (MPPI): Solves for multiple random ideas then finds the best of them.
+
+| Aspect | MPC | Nav2 MPPI |
+|---|---|---|
+| Method | Solves a constrained optimization problem each step, typically with a gradient-based solver | Samples thousands of random control sequences, simulates each, and averages them using cost-based (path-integral) weights |
+| Model and cost | Needs a smooth, differentiable setup | Handles non-linear models and non-differentiable costs |
+| Obstacles | Awkward to encode, since obstacles make the problem non-convex | Natural: the cost map penalizes trajectories that hit obstacles |
+| Constraints | Explicit and handled well | Usually handled as cost penalties |
+| Compute | Moderate (one solver run per step) | Heavy, but parallelizes well (GPU or multi-core CPU) |
+| Behavior | Deterministic and smooth | Stochastic, with more flexibility |
+
 
 ## 10. Repository structure
 
@@ -616,4 +639,5 @@ Control_Project_ARL/
   (https://control.ros.org/humble/doc/ros2_controllers/doc/mobile_robot_kinematics.html), the steering
   controllers library (https://control.ros.org/kilted/doc/ros2_controllers/steering_controllers_library/doc/userdoc.html)
 - https://www.youtube.com/watch?v=19QLyMuQ_BE&t=150s
+- https://www.mathworks.com/help/robotics/ug/local-path-planning-using-model-predictive-path-integral.html
 

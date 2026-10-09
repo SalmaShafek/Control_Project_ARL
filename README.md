@@ -60,7 +60,7 @@ The vehicle is modeled through a kinematic bicycle model that uses (x,y,yaw,v) a
 | 5.3 | Pure Pursuit | Done | `bicycle_control/bicycle_control/pure_pursuit.py` |
 | 5.4 | Extended kinematic MPC | Done | `bicycle_control/bicycle_control/mpc.py` |
 | 5.5 | Lap analyzer, telemetry, RViz dashboard | Done | `track_environment/track_environment/lap_analyzer.py` |
-| 6 | Free exploration | Done | see [section 10](#10-milestone-6-free-exploration) |
+| 6 | Free exploration | Done | see [section 9](#10-milestone-6-free-exploration) |
 | 7 | Documentation (this file) | Done | `README.md` |
 | 8 | Video walkthrough | DONE | (https://drive.google.com/drive/folders/1BquYQReVJITlk9l02qz1mvBWxcq3mg_R?usp=sharing) |
 

@@ -7,12 +7,8 @@
   <img src="assets/demo.gif" alt="Autonomous Vehicle Simulation Demo" width="100%" />
 </p>
 
-> **How to use this file.** Everything marked `TODO` or `FILL` is a placeholder for your own result,
-> screenshot or wording. Search the file for `TODO` and `FILL` before you submit, and delete these
-> instruction blocks. Lines marked `VERIFY` describe code I could not see: check them against your
-> final source files and correct them if they differ.
 
----
+
 
 ## Contents
 

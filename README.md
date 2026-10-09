@@ -17,13 +17,13 @@
 2. [System architecture](#2-system-architecture)
 3. [Reproduction guide](#3-reproduction-guide)
 4. [How each milestone was built](#4-how-each-milestone-was-built)
-5. [Benchmark results](#6-benchmark-results)
-6. [Critical comparison of the controllers](#7-critical-comparison-of-the-controllers)
-7. [Why MPC tracks better than Pure Pursuit and Lateral PID](#8-why-mpc-tracks-better-than-pure-pursuit-and-lateral-pid)
-8. [Known limitations and notes](#9-known-limitations-and-notes)
-9. [Milestone 6: free exploration](#10-milestone-6-free-exploration)
-10. [Repository structure](#12-repository-structure)
-11. [References](#13-references)
+5. [Benchmark results](#5-benchmark-results)
+6. [Critical comparison of the controllers](#6-critical-comparison-of-the-controllers)
+7. [Why MPC tracks better than Pure Pursuit and Lateral PID](#7-why-mpc-tracks-better-than-pure-pursuit-and-lateral-pid)
+8. [Known limitations and notes](#8-known-limitations-and-notes)
+9. [Milestone 6: free exploration](#9-milestone-6-free-exploration)
+10. [Repository structure](#10-repository-structure)
+11. [References](#11-references)
 
 ---
 
